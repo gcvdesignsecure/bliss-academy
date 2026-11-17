@@ -1,53 +1,67 @@
 
-import React from "react";
+import React, { Component, ErrorInfo, ReactNode } from "react";
 import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+
+import App from "./app/App";
+import { AuthProvider } from "./lib/auth";
+import "./styles/global.css";
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return {
+      hasError: true,
+      message: error.message || "Unknown application error"
+    };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("BLISS Academy startup error:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="wrap">
+          <h1>BLISS Academy</h1>
+          <h2>Application Error</h2>
+          <p>The application encountered an unexpected error.</p>
+          <pre style={{ whiteSpace: "pre-wrap", color: "#c91d21" }}>
+            {this.state.message}
+          </pre>
+          <button onClick={() => window.location.reload()}>
+            Reload Application
+          </button>
+        </main>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
-  document.body.innerHTML = `
-    <div style="padding:30px;font-family:Arial">
-      <h1>BLISS Academy</h1>
-      <h2>Startup Error</h2>
-      <p>The root element was not found in index.html.</p>
-    </div>
-  `;
-} else {
-  ReactDOM.createRoot(rootElement).render(
-    <React.StrictMode>
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "#ffffff",
-          color: "#0f1b2d",
-          fontFamily: "Arial, sans-serif",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "24px",
-          textAlign: "center",
-          boxSizing: "border-box"
-        }}
-      >
-        <h1 style={{ color: "#0b4da2" }}>
-          BLISS Academy
-        </h1>
-
-        <h2>Frontend Startup Test</h2>
-
-        <p style={{ fontSize: "17px" }}>
-          React is successfully running!
-        </p>
-
-        <p>
-          The website entry point has loaded correctly.
-        </p>
-
-        <p style={{ color: "#16803c", fontWeight: "bold" }}>
-          STARTUP TEST PASSED
-        </p>
-      </main>
-    </React.StrictMode>
-  );
+  throw new Error("BLISS Academy: root element not found.");
 }
+
+ReactDOM.createRoot(rootElement).render(
+  <React.StrictMode>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
+  </React.StrictMode>
+);

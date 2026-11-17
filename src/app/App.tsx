@@ -5,6 +5,8 @@ import Login from "../features/auth/Login";
 import Apply from "../features/admission/Apply";
 import AdminAdmissions from "../features/admin/AdminAdmissions";
 import AdminAccount from "../features/admin/AdminAccount";
+import AdminCourses from "../features/admin/AdminCourses";
+import AdminIntegrations from "../features/admin/AdminIntegrations";
 
 function Home() {
   return (
@@ -35,6 +37,8 @@ function Dashboard() {
   );
 }
 
+const admin = (el: ReactNode) => <Require roles={["superadmin"]}>{el}</Require>;
+
 export default function App() {
   return (
     <Routes>
@@ -42,8 +46,10 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/apply" element={<Apply />} />
       <Route path="/dashboard" element={<Require roles={["student", "teacher", "superadmin"]}><Dashboard /></Require>} />
-      <Route path="/admin/admissions" element={<Require roles={["superadmin"]}><AdminAdmissions /></Require>} />
-      <Route path="/admin/account" element={<Require roles={["superadmin"]}><AdminAccount /></Require>} />
+      <Route path="/admin/admissions" element={admin(<AdminAdmissions />)} />
+      <Route path="/admin/courses" element={admin(<AdminCourses />)} />
+      <Route path="/admin/integrations" element={admin(<AdminIntegrations />)} />
+      <Route path="/admin/account" element={admin(<AdminAccount />)} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

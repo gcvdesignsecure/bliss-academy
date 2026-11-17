@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
+import AdminNav from "./AdminNav";
 
 type Row = {
   id: string;
@@ -36,7 +36,7 @@ export default function AdminAdmissions() {
   return (
     <div className="wrap wide">
       <h1>Admissions</h1>
-      <p><Link to="/admin/account">My account</Link></p>
+      <AdminNav />
       {note && <div className="ok">{note}</div>}
       {rows.length === 0 && <p className="muted">No applications yet.</p>}
       {rows.map((r) => (

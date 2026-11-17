@@ -1,31 +1,53 @@
+
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import App from "./app/App";
-import { AuthProvider } from "./lib/auth";
-import { configMissing } from "./lib/supabase";
-import "./styles/global.css";
 
-const root = ReactDOM.createRoot(document.getElementById("root") !);
+const rootElement = document.getElementById("root");
 
-if (configMissing) {
-  root.render(
-    <div className="wrap">
-      <h1>Setup needed</h1>
-      <p className="muted">
-        The Supabase settings are missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-        to your environment variables, then rebuild.
-      </p>
+if (!rootElement) {
+  document.body.innerHTML = `
+    <div style="padding:30px;font-family:Arial">
+      <h1>BLISS Academy</h1>
+      <h2>Startup Error</h2>
+      <p>The root element was not found in index.html.</p>
     </div>
-  );
+  `;
 } else {
-  root.render(
+  ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </BrowserRouter>
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#ffffff",
+          color: "#0f1b2d",
+          fontFamily: "Arial, sans-serif",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "24px",
+          textAlign: "center",
+          boxSizing: "border-box"
+        }}
+      >
+        <h1 style={{ color: "#0b4da2" }}>
+          BLISS Academy
+        </h1>
+
+        <h2>Frontend Startup Test</h2>
+
+        <p style={{ fontSize: "17px" }}>
+          React is successfully running!
+        </p>
+
+        <p>
+          The website entry point has loaded correctly.
+        </p>
+
+        <p style={{ color: "#16803c", fontWeight: "bold" }}>
+          STARTUP TEST PASSED
+        </p>
+      </main>
     </React.StrictMode>
   );
 }

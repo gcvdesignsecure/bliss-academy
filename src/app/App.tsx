@@ -1,4 +1,3 @@
-
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth, Profile } from "../lib/auth";
@@ -82,15 +81,15 @@ function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!session?.user?.id) return;
+    // Capture the user id here so it is a plain string inside the async function below.
+    const uid = session?.user?.id;
+    if (!uid) return;
 
     let active = true;
 
     async function loadStudentPortal() {
       setLoadingCourses(true);
       setError("");
-
-      const uid = session.user.id;
 
       // Retrieve the student's real student record and MatNumber.
       const { data: student, error: studentError } =

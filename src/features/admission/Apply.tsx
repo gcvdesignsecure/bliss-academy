@@ -1,9 +1,9 @@
-
 import { useEffect, useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
 import VerifyContact from "./VerifyContact";
+import ChooseCourse, { StudentReady } from "./ChooseCourse";
 
 const COUNTRY_MIN = 2;
 
@@ -38,6 +38,8 @@ export default function Apply() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Set when the applicant has just been issued a MatNumber.
+  const [newMat, setNewMat] = useState<string | null>(null);
 
   const set =
     (k: keyof typeof f) =>
@@ -182,6 +184,13 @@ export default function Apply() {
     setStatus("submitted");
   }
 
+  // Just received a MatNumber: show it and let the student set a password.
+  // This is checked first because the profile role changes to "student"
+  // as soon as the MatNumber is issued.
+  if (session && newMat) {
+    return <StudentReady mat={newMat} />;
+  }
+
   // Logged-in applicant.
   if (session && profile?.role === "applicant") {
     return (
@@ -252,9 +261,13 @@ export default function Apply() {
                 )}
 
                 {status === "approved" && (
-                  <p className="ok">
-                    Approved. Payment and course selection open next.
-                  </p>
+                  <>
+                    <p className="ok">
+                      Approved. Apply for admission, choose your course,
+                      and you will receive your MatNumber.
+                    </p>
+                    <ChooseCourse onEnrolled={setNewMat} />
+                  </>
                 )}
 
                 {status === "rejected" && (

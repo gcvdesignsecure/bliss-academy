@@ -1,11 +1,25 @@
+
 import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const configMissing = !url || !key;
+export const configMissing = !SUPABASE_URL || !SUPABASE_ANON_KEY;
+
+if (configMissing) {
+  console.error(
+    "BLISS Academy: Supabase configuration is missing. Check your environment variables."
+  );
+}
 
 export const supabase = createClient(
-  url ?? "https://placeholder.supabase.co",
-  key ?? "placeholder-key"
+  SUPABASE_URL || "https://rlqccyjlsnodivjbqsdg.supabase.co",
+  SUPABASE_ANON_KEY || "MISSING_PUBLIC_KEY",
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  }
 );

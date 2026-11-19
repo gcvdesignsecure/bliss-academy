@@ -7,49 +7,58 @@ type Row = {
   id: string;
   status: string;
   created_at: string;
-  profiles: { full_name: string; email: string } | null;
+  user_id: string;
+  profiles: { full_name: string;email: string;email_verified: boolean;whatsapp_verified: boolean } | null;
+};
+type Next = "kyc_pending" | "under_review" | "approved" | "rejected";
+
+// Transitions allowed by the admin_set_admission_status database function.
+const NEXT: Record < string, { to: Next;label: string;danger ? : boolean } [] > = {
+  submitted: [{ to: "kyc_pending", label: "Request ID check" }, { to: "rejected", label: "Reject", danger: true }],
+  kyc_pending: [{ to: "under_review", label: "Move to review" }, { to: "rejected", label: "Reject", danger: true }],
+  under_review: [{ to: "approved", label: "Approve" }, { to: "kyc_pending", label: "Back to ID check" }, { to: "rejected", label: "Reject", danger: true }],
 };
 
 export default function AdminAdmissions() {
   const { signOut } = useAuth();
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState < Row[] > ([]);
   const [note, setNote] = useState("");
-
+  const [isErr, setIsErr] = useState(false);
+  
   const load = () =>
     supabase
-      .from("admissions")
-      .select("id,status,created_at,profiles(full_name,email)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setRows((data as unknown as Row[]) ?? []));
-
-  useEffect(() => { load(); }, []);
-
-  async function act(id: string, kind: "approve" | "reject") {
-    const { data, error } = await supabase.rpc(
-      kind === "approve" ? "approve_admission" : "reject_admission",
-      { p_admission: id }
-    );
-    setNote(error ? error.message : kind === "approve" ? `Approved. MatNumber: ${data}` : "Rejected.");
-    load();
+    .from("admissions")
+    .select("id,status,created_at,user_id,profiles(full_name,email,email_verified,whatsapp_verified)")
+    .order("created_at", { ascending: false })
+    .then(({ data }) => setRows((data as unknown as Row[]) ?? []));
+  
+  useEffect(() => { void load(); }, []);
+  
+  async function act(id: string, to: Next) {
+    const { error } = await supabase.rpc("admin_set_admission_status", { p_admission: id, p_status: to, p_note: null });
+    setIsErr(!!error);
+    setNote(error ? error.message : `Moved to ${to.replace("_", " ")}.`);
+    void load();
   }
-
+  
   return (
     <div className="wrap wide">
       <h1>Admissions</h1>
       <AdminNav />
-      {note && <div className="ok">{note}</div>}
+      {note && <div className={isErr ? "err" : "ok"}>{note}</div>}
       {rows.length === 0 && <p className="muted">No applications yet.</p>}
       {rows.map((r) => (
         <div className="card" key={r.id}>
           <b>{r.profiles?.full_name}</b> <span className="muted">{r.profiles?.email}</span>
-          <div className="muted">Status: {r.status.replace("_", " ")}</div>
+          <div className="muted">
+            Status: {r.status.replace("_", " ")} ·{" "}
+            {r.profiles?.email_verified ? "email verified" : "email not verified"} ·{" "}
+            {r.profiles?.whatsapp_verified ? "WhatsApp verified" : "WhatsApp not verified"}
+          </div>
           <div style={{ marginTop: 8 }}>
-            {r.status === "under_review" && (
-              <button className="small" onClick={() => act(r.id, "approve")}>Approve</button>
-            )}
-            {(r.status === "under_review" || r.status === "kyc_pending") && (
-              <button className="small danger" onClick={() => act(r.id, "reject")}>Reject</button>
-            )}
+            {(NEXT[r.status] ?? []).map((n) => (
+              <button key={n.to} className={n.danger ? "small danger" : "small"} onClick={() => act(r.id, n.to)}>{n.label}</button>
+            ))}
           </div>
         </div>
       ))}

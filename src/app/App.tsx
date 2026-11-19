@@ -3,7 +3,10 @@ import { ReactNode } from "react";
 import { useAuth, Profile } from "../lib/auth";
 import Login from "../features/auth/Login";
 import Apply from "../features/admission/Apply";
+import AdminOverview from "../features/admin/AdminOverview";
 import AdminAdmissions from "../features/admin/AdminAdmissions";
+import AdminVerifications from "../features/admin/AdminVerifications";
+import AdminAdmins from "../features/admin/AdminAdmins";
 import AdminAccount from "../features/admin/AdminAccount";
 import AdminCourses from "../features/admin/AdminCourses";
 import AdminIntegrations from "../features/admin/AdminIntegrations";
@@ -20,9 +23,9 @@ function Home() {
 }
 
 function Require({ roles, children }: { roles: Profile["role"][];children: ReactNode }) {
-  const { profile, loading } = useAuth();
+  const { profile, session, loading } = useAuth();
   if (loading) return <div className="wrap">Loading…</div>;
-  if (!profile || !roles.includes(profile.role)) return <Navigate to="/login" replace />;
+  if (!session || !profile || !roles.includes(profile.role)) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
@@ -46,9 +49,13 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/apply" element={<Apply />} />
       <Route path="/dashboard" element={<Require roles={["student", "teacher", "superadmin"]}><Dashboard /></Require>} />
+      <Route path="/admin" element={<Navigate to="/admin/overview" replace />} />
+      <Route path="/admin/overview" element={admin(<AdminOverview />)} />
       <Route path="/admin/admissions" element={admin(<AdminAdmissions />)} />
+      <Route path="/admin/verifications" element={admin(<AdminVerifications />)} />
       <Route path="/admin/courses" element={admin(<AdminCourses />)} />
       <Route path="/admin/integrations" element={admin(<AdminIntegrations />)} />
+      <Route path="/admin/admins" element={admin(<AdminAdmins />)} />
       <Route path="/admin/account" element={admin(<AdminAccount />)} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

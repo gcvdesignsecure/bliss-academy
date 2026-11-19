@@ -1,3 +1,4 @@
+
 import { useEffect, useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
@@ -43,7 +44,7 @@ export default function Apply() {
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setF({ ...f, [k]: e.target.value });
 
-  // Load Owner Admin verification settings from Supabase.
+  // Read Owner Admin verification settings.
   useEffect(() => {
     let active = true;
 
@@ -68,17 +69,18 @@ export default function Apply() {
       setSettingsLoaded(true);
     }
 
-    loadSettings();
+    void loadSettings();
 
     return () => {
       active = false;
     };
   }, []);
 
-  // Load the student's most recent admission.
+  // Read the current applicant's admission status.
   useEffect(() => {
     if (!session) {
       setLoaded(true);
+      setStatus(null);
       return;
     }
 
@@ -100,12 +102,12 @@ export default function Apply() {
       setLoaded(true);
     }
 
-    loadAdmission();
+    void loadAdmission();
 
     return () => {
       active = false;
     };
-  }, [session, msg]);
+  }, [session]);
 
   async function signUp(e: FormEvent) {
     e.preventDefault();
@@ -149,16 +151,21 @@ export default function Apply() {
     }
 
     if (data.session) {
-      setMsg("Account created successfully.");
+      setMsg("Account created successfully. You can continue.");
     } else {
-      setMsg("Account created. You can now log in.");
+      setMsg(
+        "Account created. Please log in to continue. If email confirmation is enabled by the authentication provider, confirm your email first."
+ 
+      );
     }
   }
 
   async function submitAdmission(e: FormEvent) {
     e.preventDefault();
+
     setBusy(true);
     setError("");
+    setMsg("");
 
     const { error: err } = await supabase.rpc("submit_admission", {
       p_dob: f.dob || null,
@@ -168,13 +175,14 @@ export default function Apply() {
 
     if (err) {
       setError(err.message);
-    } else {
-      setMsg("Application submitted successfully.");
-      setStatus("submitted");
+      return;
     }
+
+    setMsg("Application submitted successfully.");
+    setStatus("submitted");
   }
 
-  // Applicant admission page
+  // Logged-in applicant.
   if (session && profile?.role === "applicant") {
     return (
       <div className="wrap">
@@ -188,24 +196,29 @@ export default function Apply() {
           <p className="muted">Loading platform settings…</p>
         ) : (
           <>
-            {/* Only show email verification when Owner Admin enables it. */}
+            {/* Email verification appears only when Owner Admin enables it. */}
             {features.email_verification_required && (
               <VerifyContact channel="email" />
             )}
 
-            {/* WhatsApp verification remains independent. */}
-            <VerifyContact channel="whatsapp" />
+            {/* WhatsApp verification is not a requirement for application submission. */}
 
             {!features.email_verification_required &&
               !features.kyc_required && (
-                <p className="muted">
-                  Email verification and identity verification are
-                  currently not required for admission.
-                </p>
+                <div className="card">
+                  <p className="ok">
+                    Verification is currently not required for admission.
+                  </p>
+                  <p className="muted">
+                    You can continue with your application.
+                  </p>
+                </div>
               )}
 
             {!loaded ? (
-              <p className="muted">Loading application status…</p>
+              <p className="muted">
+                Loading application status…
+              </p>
             ) : status ? (
               <div className="card">
                 <b>
@@ -220,18 +233,17 @@ export default function Apply() {
                   (status === "kyc_pending" &&
                     !features.kyc_required)) && (
                   <p className="muted">
-                    Your application is awaiting review by BLISS
-                    Academy.
+                    Your application is awaiting review by BLISS Academy.
                   </p>
                 )}
 
                 {status === "kyc_pending" &&
                   features.kyc_required && (
-                    <p className="muted">
-                      Identity verification is required for your
-                      application to continue.
-                    </p>
-                  )}
+                  <p className="muted">
+                    Identity verification is required for your
+                    application to continue.
+                  </p>
+                )}
 
                 {status === "under_review" && (
                   <p className="muted">
@@ -265,7 +277,9 @@ export default function Apply() {
                 {error && <div className="err">{error}</div>}
 
                 <button disabled={busy}>
-                  {busy ? "Submitting…" : "Submit application"}
+                  {busy
+                    ? "Submitting…"
+                    : "Submit application"}
                 </button>
               </form>
             )}
@@ -281,7 +295,7 @@ export default function Apply() {
     );
   }
 
-  // Other authenticated roles
+  // Other authenticated roles.
   if (session && profile && profile.role !== "applicant") {
     return (
       <div className="wrap">
@@ -304,7 +318,7 @@ export default function Apply() {
     );
   }
 
-  // New applicant registration
+  // New applicant registration.
   return (
     <form className="wrap" onSubmit={signUp}>
       <h1>Apply to BLISS Academy</h1>

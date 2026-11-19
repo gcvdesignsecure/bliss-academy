@@ -1,3 +1,4 @@
+
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth, Profile } from "../lib/auth";
@@ -91,7 +92,7 @@ function Dashboard() {
 
       const uid = session.user.id;
 
-      // Retrieve the student's MatNumber.
+      // Retrieve the student's real student record and MatNumber.
       const { data: student, error: studentError } =
         await supabase
           .from("students")
@@ -107,7 +108,12 @@ function Dashboard() {
         return;
       }
 
+      // An applicant can enter the Dashboard route,
+      // but student information is shown only if a real
+      // student record exists.
       if (!student) {
+        setMatNumber("");
+        setCourses([]);
         setError(
           "Your student record has not been created yet. Please contact BLISS Academy."
         );
@@ -120,7 +126,7 @@ function Dashboard() {
       // Retrieve course enrolments belonging to this student.
       const { data: enrolments, error: enrolmentError } =
         await supabase
-          .from("en enrolments")
+          .from("enrolments")
           .select("course_id,unlocked")
           .eq("student_id", uid);
 
@@ -140,7 +146,9 @@ function Dashboard() {
         return;
       }
 
-      const courseIds = enrolled.map((item) => item.course_id);
+      const courseIds = enrolled.map(
+        (item) => item.course_id
+      );
 
       const { data: courseData, error: courseError } =
         await supabase
@@ -157,7 +165,10 @@ function Dashboard() {
       }
 
       const courseMap = new Map(
-        (courseData ?? []).map((course) => [course.id, course])
+        (courseData ?? []).map((course) => [
+          course.id,
+          course,
+        ])
       );
 
       setCourses(
@@ -281,10 +292,11 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/apply" element={<Apply />} />
 
+      {/* Corrected Dashboard route guard */}
       <Route
         path="/dashboard"
         element={
-          <Require roles={["student"]}>
+          <Require roles={["student", "applicant"]}>
             <Dashboard />
           </Require>
         }
@@ -295,21 +307,50 @@ export default function App() {
         element={<Navigate to="/admin/overview" replace />}
       />
 
-      <Route path="/admin/overview" element={admin(<AdminOverview />)} />
-      <Route path="/admin/admissions" element={admin(<AdminAdmissions />)} />
-      <Route path="/admin/verifications" element={admin(<AdminVerifications />)} />
-      <Route path="/admin/courses" element={admin(<AdminCourses />)} />
-      <Route path="/admin/integrations" element={admin(<AdminIntegrations />)} />
+      <Route
+        path="/admin/overview"
+        element={admin(<AdminOverview />)}
+      />
+
+      <Route
+        path="/admin/admissions"
+        element={admin(<AdminAdmissions />)}
+      />
+
+      <Route
+        path="/admin/verifications"
+        element={admin(<AdminVerifications />)}
+      />
+
+      <Route
+        path="/admin/courses"
+        element={admin(<AdminCourses />)}
+      />
+
+      <Route
+        path="/admin/integrations"
+        element={admin(<AdminIntegrations />)}
+      />
 
       <Route
         path="/admin/platform-settings"
         element={admin(<AdminPlatformSettings />)}
       />
 
-      <Route path="/admin/admins" element={admin(<AdminAdmins />)} />
-      <Route path="/admin/account" element={admin(<AdminAccount />)} />
+      <Route
+        path="/admin/admins"
+        element={admin(<AdminAdmins />)}
+      />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+        path="/admin/account"
+        element={admin(<AdminAccount />)}
+      />
+
+      <Route
+        path="*"
+        element={<Navigate to="/" replace />}
+      />
     </Routes>
   );
 }

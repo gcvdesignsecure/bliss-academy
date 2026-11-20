@@ -1,6 +1,6 @@
+
 name: Build Android APK
 
-# Run it by hand: GitHub -> Actions -> "Build Android APK" -> Run workflow.
 on:
   workflow_dispatch:
 
@@ -31,59 +31,58 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Set up the Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
       - name: Install web dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Install Capacitor (wraps the website as an Android app)
+      - name: Install Capacitor
         run: npm install --no-save --no-audit --no-fund @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
 
-      - name: Build the website
+      - name: Build website
         run: npm run build
 
-      - name: Create the Android project
+      - name: Create Android project
         run: |
           npx cap add android
           npx cap sync android
 
-      - name: Set the app version from the run number
+      - name: Set app version
         run: |
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
           grep -n "versionCode\|versionName" android/app/build.gradle
 
-      # Keeps the same signing key between builds so a new APK installs
-      # over the old one without uninstalling the app first.
-      - name: Restore the signing key
+      - name: Restore signing key
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
           key: bliss-debug-keystore-v1
 
-      - name: Build the APK
+      - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Name the APK
+      - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk "BLISS-Academy-${{ github.run_number }}.apk"
 
-      - name: Keep the APK as a build artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: BLISS-Academy-apk
           path: BLISS-Academy-${{ github.run_number }}.apk
 
-      # A release gives you a direct download link you can open on your phone.
-      - name: Publish a download link
+      - name: Publish APK release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
           name: BLISS Academy APK ${{ github.run_number }}
           body: |
             Android app build ${{ github.run_number }}.
-            Download the .apk below, open it on your phone and allow "Install unknown apps" if asked.
+            Download the APK and install it on Android.
           files: BLISS-Academy-${{ github.run_number }}.apk

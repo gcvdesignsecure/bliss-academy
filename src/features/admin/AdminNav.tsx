@@ -4,6 +4,7 @@ import { NavLink } from "react-router-dom";
 const links: [string, string][] = [
   ["/admin/overview", "Overview"],
   ["/admin/admissions", "Admissions"],
+  ["/admin/students", "Students"],
   ["/admin/verifications", "Verifications"],
   ["/admin/courses", "Courses"],
   ["/admin/integrations", "Integrations"],

@@ -1,3 +1,4 @@
+
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth, Profile } from "../lib/auth";
@@ -8,6 +9,7 @@ import Apply from "../features/admission/Apply";
 
 import AdminOverview from "../features/admin/AdminOverview";
 import AdminAdmissions from "../features/admin/AdminAdmissions";
+import AdminStudents from "../features/admin/AdminStudents";
 import AdminVerifications from "../features/admin/AdminVerifications";
 import AdminAdmins from "../features/admin/AdminAdmins";
 import AdminAccount from "../features/admin/AdminAccount";
@@ -32,6 +34,7 @@ function Home() {
   return (
     <div className="wrap">
       <h1>BLISS Academy</h1>
+
       <p className="muted">
         Learn practical technology and digital skills.
       </p>
@@ -63,7 +66,9 @@ function Require({
 }) {
   const { profile, session, loading } = useAuth();
 
-  if (loading) return <div className="wrap">Loading…</div>;
+  if (loading) {
+    return <div className="wrap">Loading…</div>;
+  }
 
   if (!session || !profile || !roles.includes(profile.role)) {
     return <Navigate to="/login" replace />;
@@ -81,9 +86,12 @@ function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Capture the user id here so it is a plain string inside the async function below.
     const uid = session?.user?.id;
-    if (!uid) return;
+
+    if (!uid) {
+      setLoadingCourses(false);
+      return;
+    }
 
     let active = true;
 
@@ -91,7 +99,6 @@ function Dashboard() {
       setLoadingCourses(true);
       setError("");
 
-      // Retrieve the student's real student record and MatNumber.
       const { data: student, error: studentError } =
         await supabase
           .from("students")
@@ -107,22 +114,20 @@ function Dashboard() {
         return;
       }
 
-      // An applicant can enter the Dashboard route,
-      // but student information is shown only if a real
-      // student record exists.
       if (!student) {
         setMatNumber("");
         setCourses([]);
+
         setError(
           "Your student record has not been created yet. Please contact BLISS Academy."
         );
+
         setLoadingCourses(false);
         return;
       }
 
       setMatNumber(student.mat_number);
 
-      // Retrieve course enrolments belonging to this student.
       const { data: enrolments, error: enrolmentError } =
         await supabase
           .from("enrolments")
@@ -152,7 +157,9 @@ function Dashboard() {
       const { data: courseData, error: courseError } =
         await supabase
           .from("courses")
-          .select("id,title,code,description,duration_months")
+          .select(
+            "id,title,code,description,duration_months"
+          )
           .in("id", courseIds);
 
       if (!active) return;
@@ -220,6 +227,7 @@ function Dashboard() {
       {!loadingCourses && !error && courses.length === 0 && (
         <div className="card">
           <p>You currently have no unlocked courses.</p>
+
           <p className="muted">
             Courses will appear here when your enrollment is confirmed.
           </p>
@@ -253,7 +261,7 @@ function Dashboard() {
                   type="button"
                   onClick={() =>
                     alert(
-                      "Classroom access for this course will be connected in the next LMS phase."
+                      "Classroom access will be connected in the LMS development phase."
                     )
                   }
                 >
@@ -267,6 +275,7 @@ function Dashboard() {
 
       <div className="card">
         <h3>Student account</h3>
+
         <p className="muted">
           Keep your MatNumber safe. It is your official student
           identification number at BLISS Academy.
@@ -288,10 +297,11 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+
       <Route path="/login" element={<Login />} />
+
       <Route path="/apply" element={<Apply />} />
 
-      {/* Corrected Dashboard route guard */}
       <Route
         path="/dashboard"
         element={
@@ -314,6 +324,11 @@ export default function App() {
       <Route
         path="/admin/admissions"
         element={admin(<AdminAdmissions />)}
+      />
+
+      <Route
+        path="/admin/students"
+        element={admin(<AdminStudents />)}
       />
 
       <Route

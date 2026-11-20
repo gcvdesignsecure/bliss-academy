@@ -1,4 +1,3 @@
-
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth, Profile } from "../lib/auth";
@@ -6,6 +5,7 @@ import { supabase } from "../lib/supabase";
 
 import Login from "../features/auth/Login";
 import Apply from "../features/admission/Apply";
+import Classroom from "../features/lms/Classroom";
 
 import AdminOverview from "../features/admin/AdminOverview";
 import AdminAdmissions from "../features/admin/AdminAdmissions";
@@ -257,16 +257,11 @@ function Dashboard() {
               </span>
 
               <p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    alert(
-                      "Classroom access will be connected in the LMS development phase."
-                    )
-                  }
-                >
-                  Open classroom
-                </button>
+                <Link to={`/classroom/${course.id}`}>
+                  <button type="button">
+                    Open classroom
+                  </button>
+                </Link>
               </p>
             </div>
           ))}
@@ -307,6 +302,15 @@ export default function App() {
         element={
           <Require roles={["student", "applicant"]}>
             <Dashboard />
+          </Require>
+        }
+      />
+
+      <Route
+        path="/classroom/:courseId"
+        element={
+          <Require roles={["student"]}>
+            <Classroom />
           </Require>
         }
       />

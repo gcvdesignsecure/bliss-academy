@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import AdminNav from "./AdminNav";
@@ -310,6 +309,7 @@ export default function AdminStudents() {
   return (
     <div className="wrap wide">
       <h1>Student Management</h1>
+
       <p className="muted">
         Student directory, biodata, academic records and attendance.
       </p>
@@ -363,78 +363,79 @@ export default function AdminStudents() {
         </div>
       )}
 
-      {!selected && filtered.map((record) => {
-        const profile = record.profile;
-        const bio = record.biodata;
+      {!selected &&
+        filtered.map((record) => {
+          const profile = record.profile;
+          const bio = record.biodata;
 
-        return (
-          <div
-            className="card"
-            key={record.student.user_id}
-            style={{
-              display: "flex",
-              gap: 12,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            {record.photo ? (
-              <img
-                src={record.photo}
-                alt={profile?.full_name || "Student"}
-                style={{
-                  width: 70,
-                  height: 70,
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 70,
-                  height: 70,
-                  borderRadius: "50%",
-                  display: "grid",
-                  placeItems: "center",
-                  background: "var(--blue-50)",
-                  fontSize: 24,
-                }}
-              >
-                👤
-              </div>
-            )}
-
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <b>{profile?.full_name || "Unnamed Student"}</b>
-
-              <div className="muted">
-                {record.student.mat_number}
-              </div>
-
-              <div className="muted">
-                {profile?.email || "No email"}
-              </div>
-
-              <div className="muted">
-                {bio?.phone_number || profile?.whatsapp || "No phone"}
-              </div>
-
-              <div className="muted">
-                {record.courses.length} course(s)
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="small"
-              onClick={() => openStudent(record)}
+          return (
+            <div
+              className="card"
+              key={record.student.user_id}
+              style={{
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
             >
-              View profile
-            </button>
-          </div>
-        );
-      })}
+              {record.photo ? (
+                <img
+                  src={record.photo}
+                  alt={profile?.full_name || "Student"}
+                  style={{
+                    width: 70,
+                    height: 70,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 70,
+                    height: 70,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    background: "var(--blue-50)",
+                    fontSize: 24,
+                  }}
+                >
+                  👤
+                </div>
+              )}
+
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <b>{profile?.full_name || "Unnamed Student"}</b>
+
+                <div className="muted">
+                  {record.student.mat_number}
+                </div>
+
+                <div className="muted">
+                  {profile?.email || "No email"}
+                </div>
+
+                <div className="muted">
+                  {bio?.phone_number || profile?.whatsapp || "No phone"}
+                </div>
+
+                <div className="muted">
+                  {record.courses.length} course(s)
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="small"
+                onClick={() => openStudent(record)}
+              >
+                View profile
+              </button>
+            </div>
+          );
+        })}
 
       {selected && (
         <div className="card">
@@ -459,7 +460,7 @@ export default function AdminStudents() {
                 borderRadius: 12,
               }}
             />
-          }
+          )}
 
           <h2>{selected.profile?.full_name || "Student"}</h2>
 

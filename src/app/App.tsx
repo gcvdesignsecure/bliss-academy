@@ -6,6 +6,12 @@ import { supabase } from "../lib/supabase";
 import Login from "../features/auth/Login";
 import Apply from "../features/admission/Apply";
 import Classroom from "../features/lms/Classroom";
+import StudentProfile, {
+  BIODATA_COLUMNS,
+  BiodataRow,
+  isBiodataComplete,
+} from "../features/student/StudentProfile";
+import ContactLecturer from "../features/student/ContactLecturer";
 
 import AdminOverview from "../features/admin/AdminOverview";
 import AdminAdmissions from "../features/admin/AdminAdmissions";
@@ -29,6 +35,11 @@ type Enrolment = {
   course_id: string;
   unlocked: boolean;
 };
+
+// Solid colours so dropdown menus are never see-through.
+const MENU_BG = "#ffffff";
+const MENU_TEXT = "#111827";
+const MENU_BORDER = "#d1d5db";
 
 function Home() {
   return (
@@ -85,6 +96,10 @@ function Dashboard() {
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [error, setError] = useState("");
 
+  const [view, setView] = useState<"courses" | "profile">("courses");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(true);
+
   useEffect(() => {
     const uid = session?.user?.id;
 
@@ -127,6 +142,18 @@ function Dashboard() {
       }
 
       setMatNumber(student.mat_number);
+
+      const { data: bio } = await supabase
+        .from("student_biodata")
+        .select(BIODATA_COLUMNS)
+        .eq("user_id", uid)
+        .maybeSingle();
+
+      if (!active) return;
+
+      setProfileComplete(
+        isBiodataComplete(bio as unknown as BiodataRow | null)
+      );
 
       const { data: enrolments, error: enrolmentError } =
         await supabase
@@ -194,92 +221,256 @@ function Dashboard() {
     };
   }, [session]);
 
+  const isStudent = matNumber !== "";
+
+  function go(next: "courses" | "profile") {
+    setView(next);
+    setMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  const menuItemStyle = (active: boolean) => ({
+    display: "block",
+    width: "100%",
+    boxSizing: "border-box" as const,
+    margin: "6px 0 0",
+    padding: 12,
+    borderRadius: 10,
+    textAlign: "left" as const,
+    border: active ? "2px solid #2563eb" : `1px solid ${MENU_BORDER}`,
+    background: active ? "#eff6ff" : "#ffffff",
+    color: MENU_TEXT,
+    cursor: "pointer",
+  });
+
   return (
     <div className="wrap wide">
-      <h1>Student Dashboard</h1>
+      {/* Top bar: profile menu on the left, contact lecturer on the right */}
+      {isStudent && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 12,
+            position: "relative",
+            zIndex: 1000,
+          }}
+        >
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-expanded={menuOpen}
+              aria-haspopup="true"
+              style={{ width: "auto", margin: 0 }}
+            >
+              ☰ Menu {menuOpen ? "▴" : "▾"}
+            </button>
 
-      <div className="card">
-        <h2>Welcome, {profile?.full_name}</h2>
+            {menuOpen && (
+              <>
+                <div
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0,
+                    zIndex: 998,
+                    background: "rgba(0,0,0,0.35)",
+                  }}
+                />
 
-        <p className="muted">
-          Welcome to your BLISS Academy student portal.
-        </p>
+                <div
+                  role="menu"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 8px)",
+                    left: 0,
+                    zIndex: 999,
+                    width: "min(300px, 88vw)",
+                    padding: 10,
+                    borderRadius: 12,
+                    border: `1px solid ${MENU_BORDER}`,
+                    background: MENU_BG,
+                    color: MENU_TEXT,
+                    boxShadow: "0 12px 30px rgba(0,0,0,0.25)",
+                  }}
+                >
+                  <div style={{ padding: "4px 6px 8px", fontWeight: 600 }}>
+                    {profile?.full_name}
+                    <div
+                      style={{
+                        fontWeight: 400,
+                        fontSize: 13,
+                        color: "#6b7280",
+                      }}
+                    >
+                      {matNumber}
+                    </div>
+                  </div>
 
-        <div>
-          <b>MatNumber</b>
-          <p>{matNumber || "Loading MatNumber…"}</p>
-        </div>
-
-        <div>
-          <b>Account</b>
-          <p className="ok">Student account</p>
-        </div>
-      </div>
-
-      <h2>My Courses</h2>
-
-      {loadingCourses && (
-        <p className="muted">Loading your courses…</p>
-      )}
-
-      {error && <div className="err">{error}</div>}
-
-      {!loadingCourses && !error && courses.length === 0 && (
-        <div className="card">
-          <p>You currently have no unlocked courses.</p>
-
-          <p className="muted">
-            Courses will appear here when your enrollment is confirmed.
-          </p>
-        </div>
-      )}
-
-      {!loadingCourses && courses.length > 0 && (
-        <div>
-          {courses.map((course) => (
-            <div className="card" key={course.id}>
-              <h3>{course.title}</h3>
-
-              <p className="muted">
-                Course code: {course.code}
-              </p>
-
-              {course.description && (
-                <p>{course.description}</p>
-              )}
-
-              <p className="muted">
-                Duration: {course.duration_months} months
-              </p>
-
-              <span className="badge good">
-                Enrollment active
-              </span>
-
-              <p>
-                <Link to={`/classroom/${course.id}`}>
-                  <button type="button">
-                    Open classroom
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => go("courses")}
+                    style={menuItemStyle(view === "courses")}
+                  >
+                    🏠 My courses
                   </button>
-                </Link>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => go("profile")}
+                    style={menuItemStyle(view === "profile")}
+                  >
+                    👤 My profile
+                    {!profileComplete && (
+                      <span style={{ color: "#b45309" }}>
+                        {" "}
+                        • incomplete
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={signOut}
+                    style={menuItemStyle(false)}
+                  >
+                    🚪 Log out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <ContactLecturer
+            studentName={profile?.full_name ?? "Student"}
+            matNumber={matNumber}
+          />
+        </div>
+      )}
+
+      <h1>
+        {view === "profile" && isStudent
+          ? "My Profile"
+          : "Student Dashboard"}
+      </h1>
+
+      {view === "profile" && isStudent ? (
+        <StudentProfile
+          matNumber={matNumber}
+          onSaved={(complete) => setProfileComplete(complete)}
+        />
+      ) : (
+        <>
+          <div className="card">
+            <h2>Welcome, {profile?.full_name}</h2>
+
+            <p className="muted">
+              Welcome to your BLISS Academy student portal.
+            </p>
+
+            <div>
+              <b>MatNumber</b>
+              <p>{matNumber || "Loading MatNumber…"}</p>
+            </div>
+
+            <div>
+              <b>Account</b>
+              <p className="ok">Student account</p>
+            </div>
+          </div>
+
+          {isStudent && !profileComplete && (
+            <div className="card">
+              <b>Complete your profile</b>
+
+              <p className="muted">
+                Some of your bio data is missing. Please fill it in so the
+                academy has your details.
+              </p>
+
+              <button type="button" onClick={() => go("profile")}>
+                Complete my profile
+              </button>
+            </div>
+          )}
+
+          <h2>My Courses</h2>
+
+          {loadingCourses && (
+            <p className="muted">Loading your courses…</p>
+          )}
+
+          {error && <div className="err">{error}</div>}
+
+          {!loadingCourses && !error && courses.length === 0 && (
+            <div className="card">
+              <p>You currently have no unlocked courses.</p>
+
+              <p className="muted">
+                Courses will appear here when your enrollment is confirmed.
               </p>
             </div>
-          ))}
-        </div>
+          )}
+
+          {!loadingCourses && courses.length > 0 && (
+            <div>
+              {courses.map((course) => (
+                <div className="card" key={course.id}>
+                  <h3>{course.title}</h3>
+
+                  <p className="muted">
+                    Course code: {course.code}
+                  </p>
+
+                  {course.description && (
+                    <p>{course.description}</p>
+                  )}
+
+                  <p className="muted">
+                    Duration: {course.duration_months} months
+                  </p>
+
+                  <span className="badge good">
+                    Enrollment active
+                  </span>
+
+                  <p>
+                    <Link to={`/classroom/${course.id}`}>
+                      <button type="button">
+                        Open classroom
+                      </button>
+                    </Link>
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="card">
+            <h3>Student account</h3>
+
+            <p className="muted">
+              Keep your MatNumber safe. It is your official student
+              identification number at BLISS Academy.
+            </p>
+          </div>
+        </>
       )}
 
-      <div className="card">
-        <h3>Student account</h3>
-
-        <p className="muted">
-          Keep your MatNumber safe. It is your official student
-          identification number at BLISS Academy.
-        </p>
-      </div>
-
-      <button className="ghost" onClick={signOut}>
-        Log out
-      </button>
+      {!isStudent && (
+        <button className="ghost" onClick={signOut}>
+          Log out
+        </button>
+      )}
     </div>
   );
 }

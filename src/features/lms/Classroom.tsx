@@ -77,6 +77,7 @@ export default function Classroom() {
   const [current, setCurrent] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [html, setHTML] = useState(initialHTML);
   const [css, setCSS] = useState(initialCSS);
@@ -168,12 +169,26 @@ export default function Classroom() {
     };
   }, [courseId, uid]);
 
+  // When the classes menu opens, scroll the current class into view.
+  useEffect(() => {
+    if (!menuOpen || !current) return;
+
+    const timer = window.setTimeout(() => {
+      document
+        .getElementById(`class-item-${current.id}`)
+        ?.scrollIntoView({ block: "center" });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [menuOpen, current]);
+
   function selectLesson(lesson: Lesson) {
     const p = progress.find((x) => x.lesson_id === lesson.id);
 
     if (!p?.unlocked) return;
 
     setCurrent(lesson);
+    setMenuOpen(false);
     setActiveTab("lesson");
     setQuiz([]);
     setAnswers({});
@@ -184,11 +199,21 @@ export default function Classroom() {
     setHTML(lesson.starter_html || initialHTML);
     setCSS(lesson.starter_css || initialCSS);
     setJS(lesson.starter_js || initialJS);
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   const currentProgress = useMemo(
     () => progress.find((p) => p.lesson_id === current?.id),
     [progress, current]
+  );
+
+  const completedCount = useMemo(
+    () =>
+      lessons.filter((l) =>
+        progress.some((p) => p.lesson_id === l.id && p.completed)
+      ).length,
+    [lessons, progress]
   );
 
   const srcDoc = useMemo(() => {
@@ -334,7 +359,134 @@ ${js}
 
   return (
     <div className="wrap wide" style={{ paddingBottom: 40 }}>
-      <Link to="/dashboard">← Student Dashboard</Link>
+      {/* Top bar: back link on the left, classes dropdown on the right */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 8,
+        }}
+      >
+        <Link to="/dashboard">← Student Dashboard</Link>
+
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-haspopup="true"
+            style={{ width: "auto", margin: 0 }}
+          >
+            ☰ Classes ({completedCount}/{lessons.length}) {menuOpen ? "▴" : "▾"}
+          </button>
+
+          {menuOpen && (
+            <>
+              {/* Invisible overlay: tapping outside closes the menu */}
+              <div
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 40,
+                  background: "transparent",
+                }}
+              />
+
+              <div
+                role="menu"
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  zIndex: 50,
+                  width: "min(380px, 92vw)",
+                  maxHeight: "65vh",
+                  overflowY: "auto",
+                  padding: 10,
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                  background: "var(--surface)",
+                  boxShadow: "0 12px 30px rgba(0,0,0,0.18)",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "4px 6px 10px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Course Classes
+                  <div
+                    className="muted"
+                    style={{ fontWeight: 400, fontSize: 13 }}
+                  >
+                    {completedCount} of {lessons.length} completed
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 6 }}>
+                  {lessons.map((lesson) => {
+                    const p = progress.find(
+                      (item) => item.lesson_id === lesson.id
+                    );
+
+                    const unlocked = !!p?.unlocked;
+                    const completed = !!p?.completed;
+                    const isCurrent = current?.id === lesson.id;
+
+                    return (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        id={`class-item-${lesson.id}`}
+                        key={lesson.id}
+                        disabled={!unlocked}
+                        onClick={() => selectLesson(lesson)}
+                        style={{
+                          width: "100%",
+                          margin: 0,
+                          textAlign: "left",
+                          padding: 10,
+                          borderRadius: 10,
+                          border: isCurrent
+                            ? "2px solid #2563eb"
+                            : "1px solid var(--border)",
+                          opacity: unlocked ? 1 : 0.55,
+                          background: completed
+                            ? "#e9f8ef"
+                            : "var(--surface)",
+                          color: "var(--text)",
+                        }}
+                      >
+                        <strong>
+                          {completed ? "✅" : unlocked ? "▶" : "🔒"} Class{" "}
+                          {lesson.class_number}
+                        </strong>
+                        <br />
+                        {lesson.title}
+                        <br />
+                        <small>
+                          {completed
+                            ? `Completed • Best score ${p?.best_score ?? 0}%`
+                            : unlocked
+                            ? "Available"
+                            : "Locked"}
+                          {p?.attempts_count
+                            ? ` • ${p.attempts_count} attempt(s)`
+                            : ""}
+                        </small>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       <h1>BLISS Classroom</h1>
 
@@ -342,60 +494,6 @@ ${js}
         Learn at your own pace. Pass each class test with
         every answer correct to unlock the next class.
       </p>
-
-      <div className="card">
-        <h2>Course Classes</h2>
-        <p>{lessons.length} classes available</p>
-
-        <div style={{ display: "grid", gap: 8 }}>
-          {lessons.map((lesson) => {
-            const p = progress.find(
-              (item) => item.lesson_id === lesson.id
-            );
-
-            const unlocked = !!p?.unlocked;
-            const completed = !!p?.completed;
-
-            return (
-              <button
-                key={lesson.id}
-                disabled={!unlocked}
-                onClick={() => selectLesson(lesson)}
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderRadius: 10,
-                  border: current?.id === lesson.id
-                    ? "2px solid #2563eb"
-                    : "1px solid var(--border)",
-                  opacity: unlocked ? 1 : 0.55,
-                  background: completed
-                    ? "#e9f8ef"
-                    : "var(--surface)",
-                  color: "var(--text)",
-                }}
-              >
-                <strong>
-                  {unlocked ? "▶" : "🔒"} Class {lesson.class_number}
-                </strong>
-                <br />
-                {lesson.title}
-                <br />
-                <small>
-                  {completed
-                    ? `Completed • Best score ${p?.best_score ?? 0}%`
-                    : unlocked
-                    ? "Available"
-                    : "Locked"}
-                  {p?.attempts_count
-                    ? ` • ${p.attempts_count} attempt(s)`
-                    : ""}
-                </small>
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {current && (
         <>

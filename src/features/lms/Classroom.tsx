@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
@@ -55,9 +54,23 @@ const initialJS = `document.getElementById("helloBtn")
     alert("Hello student!");
   });`;
 
+// Turns any value into safe text so React never receives an object as a child.
+function asText(value: any): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
 export default function Classroom() {
   const { courseId } = useParams();
-  const { session, profile } = useAuth();
+  const { session } = useAuth();
 
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [progress, setProgress] = useState<Progress[]>([]);
@@ -137,7 +150,13 @@ export default function Classroom() {
           p.some((item) => item.lesson_id === l.id && item.unlocked)
         ) || (lessonData || [])[0];
 
-      if (firstUnlocked) setCurrent(firstUnlocked as Lesson);
+      if (firstUnlocked) {
+        const lesson = firstUnlocked as Lesson;
+        setCurrent(lesson);
+        setHTML(lesson.starter_html || initialHTML);
+        setCSS(lesson.starter_css || initialCSS);
+        setJS(lesson.starter_js || initialJS);
+      }
 
       setLoading(false);
     }
@@ -160,6 +179,7 @@ export default function Classroom() {
     setAnswers({});
     setQuizResult(null);
     setPreview(false);
+    setError("");
 
     setHTML(lesson.starter_html || initialHTML);
     setCSS(lesson.starter_css || initialCSS);
@@ -262,7 +282,14 @@ ${js}
     }
 
     setQuizResult(data);
-    await refreshProgress();
+    setQuiz([]);
+    setAnswers({});
+
+    try {
+      await refreshProgress();
+    } catch (err: any) {
+      setError(err?.message ?? "Could not refresh progress.");
+    }
 
     setQuizLoading(false);
   }
@@ -274,7 +301,7 @@ ${js}
 
   function optionLabel(option: any) {
     if (typeof option === "string") return option;
-    return option?.label ?? option?.text ?? option?.value ?? "";
+    return asText(option?.label ?? option?.text ?? option?.value ?? "");
   }
 
   if (loading) {
@@ -290,6 +317,20 @@ ${js}
       </div>
     );
   }
+
+  const sections: any[] = Array.isArray(current?.lesson_content?.sections)
+    ? current!.lesson_content.sections
+    : [];
+
+  const examples: any[] = Array.isArray(current?.lesson_content?.examples)
+    ? current!.lesson_content.examples
+    : [];
+
+  const practiceTasks: any[] = Array.isArray(
+    current?.lesson_content?.practice_tasks
+  )
+    ? current!.lesson_content.practice_tasks
+    : [];
 
   return (
     <div className="wrap wide" style={{ paddingBottom: 40 }}>
@@ -363,7 +404,7 @@ ${js}
               Month {current.month_number} • Class {current.class_number}
             </p>
             <h2>{current.title}</h2>
-            <p>{current.description}</p>
+            <p>{asText(current.description)}</p>
 
             {currentProgress?.completed && (
               <p className="ok">
@@ -384,15 +425,13 @@ ${js}
             <div className="card">
               <h2>Lesson Material</h2>
 
-              {current.lesson_content?.sections?.length ? (
-                current.lesson_content.sections.map(
-                  (section: any, i: number) => (
-                    <section key={i}>
-                      <h3>{section.heading}</h3>
-                      <p>{section.content}</p>
-                    </section>
-                  )
-                )
+              {sections.length > 0 ? (
+                sections.map((section: any, i: number) => (
+                  <section key={i}>
+                    <h3>{asText(section?.heading)}</h3>
+                    <p>{asText(section?.body ?? section?.content)}</p>
+                  </section>
+                ))
               ) : (
                 <>
                   <p>
@@ -409,26 +448,38 @@ ${js}
                 </>
               )}
 
-              {current.lesson_content?.examples?.map(
-                (example: any, i: number) => (
-                  <div key={i}>
-                    <h3>{example.title}</h3>
-                    <pre style={{ overflowX: "auto" }}>
-                      <code>{example.code}</code>
-                    </pre>
-                    <p>{example.explanation}</p>
-                  </div>
-                )
-              )}
+              {examples.map((example: any, i: number) => (
+                <div key={i}>
+                  <h3>{asText(example?.title)}</h3>
+                  <pre style={{ overflowX: "auto" }}>
+                    <code>{asText(example?.code)}</code>
+                  </pre>
+                  <p>{asText(example?.explanation)}</p>
+                </div>
+              ))}
 
-              {current.lesson_content?.practice_tasks?.map(
-                (task: any, i: number) => (
+              {practiceTasks.map((task: any, i: number) => {
+                const isText = typeof task === "string";
+
+                return (
                   <div key={i}>
-                    <h3>Practice {i + 1}</h3>
-                    <p>{task}</p>
+                    <h3>
+                      {isText
+                        ? `Practice ${i + 1}`
+                        : asText(task?.title) || `Practice ${i + 1}`}
+                    </h3>
+                    <p>
+                      {isText
+                        ? task
+                        : asText(
+                            task?.instructions ??
+                              task?.description ??
+                              task?.body
+                          )}
+                    </p>
                   </div>
-                )
-              )}
+                );
+              })}
             </div>
           )}
 
@@ -534,7 +585,7 @@ ${js}
               {quiz.map((question, index) => (
                 <div key={question.id} style={{ margin: "20px 0" }}>
                   <h3>
-                    {index + 1}. {question.prompt}
+                    {index + 1}. {asText(question.prompt)}
                   </h3>
 
                   {(question.options || []).map((option: any, i: number) => {

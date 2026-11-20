@@ -3,6 +3,8 @@ import { ReactNode, useEffect, useState } from "react";
 import { useAuth, Profile } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 
+import AppUpdateNotice from "../components/AppUpdateNotice";
+
 import Login from "../features/auth/Login";
 import Apply from "../features/admission/Apply";
 import Classroom from "../features/lms/Classroom";
@@ -36,7 +38,6 @@ type Enrolment = {
   unlocked: boolean;
 };
 
-// Solid colours so dropdown menus are never see-through.
 const MENU_BG = "#ffffff";
 const MENU_TEXT = "#111827";
 const MENU_BORDER = "#d1d5db";
@@ -237,7 +238,9 @@ function Dashboard() {
     padding: 12,
     borderRadius: 10,
     textAlign: "left" as const,
-    border: active ? "2px solid #2563eb" : `1px solid ${MENU_BORDER}`,
+    border: active
+      ? "2px solid #2563eb"
+      : `1px solid ${MENU_BORDER}`,
     background: active ? "#eff6ff" : "#ffffff",
     color: MENU_TEXT,
     cursor: "pointer",
@@ -245,7 +248,6 @@ function Dashboard() {
 
   return (
     <div className="wrap wide">
-      {/* Top bar: profile menu on the left, contact lecturer on the right */}
       {isStudent && (
         <div
           style={{
@@ -300,8 +302,14 @@ function Dashboard() {
                     boxShadow: "0 12px 30px rgba(0,0,0,0.25)",
                   }}
                 >
-                  <div style={{ padding: "4px 6px 8px", fontWeight: 600 }}>
+                  <div
+                    style={{
+                      padding: "4px 6px 8px",
+                      fontWeight: 600,
+                    }}
+                  >
                     {profile?.full_name}
+
                     <div
                       style={{
                         fontWeight: 400,
@@ -481,85 +489,89 @@ const admin = (el: ReactNode) => (
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
+    <>
+      <AppUpdateNotice />
 
-      <Route path="/login" element={<Login />} />
+      <Routes>
+        <Route path="/" element={<Home />} />
 
-      <Route path="/apply" element={<Apply />} />
+        <Route path="/login" element={<Login />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <Require roles={["student", "applicant"]}>
-            <Dashboard />
-          </Require>
-        }
-      />
+        <Route path="/apply" element={<Apply />} />
 
-      <Route
-        path="/classroom/:courseId"
-        element={
-          <Require roles={["student"]}>
-            <Classroom />
-          </Require>
-        }
-      />
+        <Route
+          path="/dashboard"
+          element={
+            <Require roles={["student", "applicant"]}>
+              <Dashboard />
+            </Require>
+          }
+        />
 
-      <Route
-        path="/admin"
-        element={<Navigate to="/admin/overview" replace />}
-      />
+        <Route
+          path="/classroom/:courseId"
+          element={
+            <Require roles={["student"]}>
+              <Classroom />
+            </Require>
+          }
+        />
 
-      <Route
-        path="/admin/overview"
-        element={admin(<AdminOverview />)}
-      />
+        <Route
+          path="/admin"
+          element={<Navigate to="/admin/overview" replace />}
+        />
 
-      <Route
-        path="/admin/admissions"
-        element={admin(<AdminAdmissions />)}
-      />
+        <Route
+          path="/admin/overview"
+          element={admin(<AdminOverview />)}
+        />
 
-      <Route
-        path="/admin/students"
-        element={admin(<AdminStudents />)}
-      />
+        <Route
+          path="/admin/admissions"
+          element={admin(<AdminAdmissions />)}
+        />
 
-      <Route
-        path="/admin/verifications"
-        element={admin(<AdminVerifications />)}
-      />
+        <Route
+          path="/admin/students"
+          element={admin(<AdminStudents />)}
+        />
 
-      <Route
-        path="/admin/courses"
-        element={admin(<AdminCourses />)}
-      />
+        <Route
+          path="/admin/verifications"
+          element={admin(<AdminVerifications />)}
+        />
 
-      <Route
-        path="/admin/integrations"
-        element={admin(<AdminIntegrations />)}
-      />
+        <Route
+          path="/admin/courses"
+          element={admin(<AdminCourses />)}
+        />
 
-      <Route
-        path="/admin/platform-settings"
-        element={admin(<AdminPlatformSettings />)}
-      />
+        <Route
+          path="/admin/integrations"
+          element={admin(<AdminIntegrations />)}
+        />
 
-      <Route
-        path="/admin/admins"
-        element={admin(<AdminAdmins />)}
-      />
+        <Route
+          path="/admin/platform-settings"
+          element={admin(<AdminPlatformSettings />)}
+        />
 
-      <Route
-        path="/admin/account"
-        element={admin(<AdminAccount />)}
-      />
+        <Route
+          path="/admin/admins"
+          element={admin(<AdminAdmins />)}
+        />
 
-      <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
-    </Routes>
+        <Route
+          path="/admin/account"
+          element={admin(<AdminAccount />)}
+        />
+
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
+      </Routes>
+    </>
   );
 }

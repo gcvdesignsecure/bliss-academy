@@ -58,9 +58,15 @@ type Attendance = {
 
 type Progress = {
   student_id: string;
+  lesson_id: string;
   completed: boolean;
   unlocked: boolean;
   best_score: number | null;
+};
+
+type LessonRef = {
+  id: string;
+  course_id: string;
 };
 
 type StudentRecord = {
@@ -71,6 +77,8 @@ type StudentRecord = {
   enrolments: Enrolment[];
   attendance: Attendance[];
   progress: Progress[];
+  lessonCourse: Record<string, string>;
+  lessonTotals: Record<string, number>;
   photo: string | null;
 };
 
@@ -98,6 +106,30 @@ function dateLabel(value?: string | null) {
     month: "long",
     day: "numeric",
   });
+}
+
+function attendanceStats(rows: Attendance[]) {
+  const total = rows.length;
+
+  const present = rows.filter(
+    (a) => a.status.toLowerCase() === "present"
+  ).length;
+
+  const percentage =
+    total > 0 ? Math.round((present / total) * 100) : 0;
+
+  return { total, present, percentage };
+}
+
+function progressStats(rows: Progress[], totalLessons: number) {
+  const completed = rows.filter((p) => p.completed).length;
+
+  const percentage =
+    totalLessons > 0
+      ? Math.round((completed / totalLessons) * 100)
+      : 0;
+
+  return { total: totalLessons, completed, percentage };
 }
 
 export default function AdminStudents() {
@@ -137,6 +169,7 @@ export default function AdminStudents() {
         attendanceResult,
         progressResult,
         courseResult,
+        lessonResult,
       ] = await Promise.all([
         supabase
           .from("profiles")
@@ -160,12 +193,16 @@ export default function AdminStudents() {
 
         supabase
           .from("lesson_progress")
-          .select("student_id,completed,unlocked,best_score")
+          .select("student_id,lesson_id,completed,unlocked,best_score")
           .in("student_id", ids),
 
         supabase
           .from("courses")
           .select("id,title,code,duration_months"),
+
+        supabase
+          .from("course_lessons")
+          .select("id,course_id"),
       ]);
 
       if (profileResult.error) throw profileResult.error;
@@ -174,6 +211,7 @@ export default function AdminStudents() {
       if (attendanceResult.error) throw attendanceResult.error;
       if (progressResult.error) throw progressResult.error;
       if (courseResult.error) throw courseResult.error;
+      if (lessonResult.error) throw lessonResult.error;
 
       const profiles = (profileResult.data ?? []) as Profile[];
       const biodata = (biodataResult.data ?? []) as Biodata[];
@@ -181,6 +219,17 @@ export default function AdminStudents() {
       const attendance = (attendanceResult.data ?? []) as Attendance[];
       const progress = (progressResult.data ?? []) as Progress[];
       const courses = (courseResult.data ?? []) as Course[];
+      const lessons = (lessonResult.data ?? []) as LessonRef[];
+
+      // lesson id -> course id, and course id -> number of lessons
+      const lessonCourse: Record<string, string> = {};
+      const lessonTotals: Record<string, number> = {};
+
+      for (const lesson of lessons) {
+        lessonCourse[lesson.id] = lesson.course_id;
+        lessonTotals[lesson.course_id] =
+          (lessonTotals[lesson.course_id] ?? 0) + 1;
+      }
 
       const profileMap = new Map(
         profiles.map((p) => [p.id, p])
@@ -228,6 +277,8 @@ export default function AdminStudents() {
             progress: progress.filter(
               (p) => p.student_id === student.user_id
             ),
+            lessonCourse,
+            lessonTotals,
             photo,
           };
         })
@@ -278,32 +329,6 @@ export default function AdminStudents() {
 
   function closeStudent() {
     setSelected(null);
-  }
-
-  function attendanceStats(record: StudentRecord) {
-    const total = record.attendance.length;
-
-    const present = record.attendance.filter(
-      (a) => a.status.toLowerCase() === "present"
-    ).length;
-
-    const percentage =
-      total > 0 ? Math.round((present / total) * 100) : 0;
-
-    return { total, present, percentage };
-  }
-
-  function progressStats(record: StudentRecord) {
-    const total = record.progress.length;
-
-    const completed = record.progress.filter(
-      (p) => p.completed
-    ).length;
-
-    const percentage =
-      total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    return { total, completed, percentage };
   }
 
   return (
@@ -599,17 +624,17 @@ export default function AdminStudents() {
               (a) => a.course_id === course.id
             );
 
-            const courseProgress = selected.progress;
+            // Only lessons that belong to THIS course.
+            const courseProgress = selected.progress.filter(
+              (p) => selected.lessonCourse[p.lesson_id] === course.id
+            );
 
-            const stats = attendanceStats({
-              ...selected,
-              attendance: courseAttendance,
-            });
+            const stats = attendanceStats(courseAttendance);
 
-            const progress = progressStats({
-              ...selected,
-              progress: courseProgress,
-            });
+            const progress = progressStats(
+              courseProgress,
+              selected.lessonTotals[course.id] ?? 0
+            );
 
             return (
               <div className="card" key={course.id}>
@@ -646,7 +671,7 @@ export default function AdminStudents() {
                   <b>Lesson progress:</b>{" "}
                   {progress.total > 0
                     ? `${progress.completed}/${progress.total} (${progress.percentage}%)`
-                    : "No lesson progress yet"}
+                    : "No lessons added to this course yet"}
                 </p>
               </div>
             );

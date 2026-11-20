@@ -54,6 +54,11 @@ const initialJS = `document.getElementById("helloBtn")
     alert("Hello student!");
   });`;
 
+// Solid colours for the classes menu so it is never see-through.
+const MENU_BG = "#ffffff";
+const MENU_TEXT = "#111827";
+const MENU_BORDER = "#d1d5db";
+
 // Turns any value into safe text so React never receives an object as a child.
 function asText(value: any): string {
   if (value === null || value === undefined) return "";
@@ -367,6 +372,8 @@ ${js}
           alignItems: "center",
           gap: 12,
           marginBottom: 8,
+          position: "relative",
+          zIndex: 1000,
         }}
       >
         <Link to="/dashboard">← Student Dashboard</Link>
@@ -384,14 +391,17 @@ ${js}
 
           {menuOpen && (
             <>
-              {/* Invisible overlay: tapping outside closes the menu */}
+              {/* Dim overlay: tapping outside closes the menu */}
               <div
                 onClick={() => setMenuOpen(false)}
                 style={{
                   position: "fixed",
-                  inset: 0,
-                  zIndex: 40,
-                  background: "transparent",
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  left: 0,
+                  zIndex: 998,
+                  background: "rgba(0,0,0,0.35)",
                 }}
               />
 
@@ -401,27 +411,32 @@ ${js}
                   position: "absolute",
                   top: "calc(100% + 8px)",
                   right: 0,
-                  zIndex: 50,
+                  zIndex: 999,
                   width: "min(380px, 92vw)",
                   maxHeight: "65vh",
                   overflowY: "auto",
                   padding: 10,
                   borderRadius: 12,
-                  border: "1px solid var(--border)",
-                  background: "var(--surface)",
-                  boxShadow: "0 12px 30px rgba(0,0,0,0.18)",
+                  border: `1px solid ${MENU_BORDER}`,
+                  background: MENU_BG,
+                  color: MENU_TEXT,
+                  boxShadow: "0 12px 30px rgba(0,0,0,0.25)",
                 }}
               >
                 <div
                   style={{
                     padding: "4px 6px 10px",
                     fontWeight: 600,
+                    color: MENU_TEXT,
                   }}
                 >
                   Course Classes
                   <div
-                    className="muted"
-                    style={{ fontWeight: 400, fontSize: 13 }}
+                    style={{
+                      fontWeight: 400,
+                      fontSize: 13,
+                      color: "#6b7280",
+                    }}
                   >
                     {completedCount} of {lessons.length} completed
                   </div>
@@ -453,12 +468,14 @@ ${js}
                           borderRadius: 10,
                           border: isCurrent
                             ? "2px solid #2563eb"
-                            : "1px solid var(--border)",
-                          opacity: unlocked ? 1 : 0.55,
+                            : `1px solid ${MENU_BORDER}`,
                           background: completed
                             ? "#e9f8ef"
-                            : "var(--surface)",
-                          color: "var(--text)",
+                            : unlocked
+                            ? "#ffffff"
+                            : "#f3f4f6",
+                          color: unlocked ? MENU_TEXT : "#6b7280",
+                          cursor: unlocked ? "pointer" : "not-allowed",
                         }}
                       >
                         <strong>
